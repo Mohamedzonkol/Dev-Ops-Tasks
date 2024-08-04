@@ -1,0 +1,3 @@
+[submodule "Task13/spring-petclinic"]
+	path = Task13/spring-petclinic
+	url = https://github.com/Mohamedzonkol/Dev-Ops-Tasks.git
