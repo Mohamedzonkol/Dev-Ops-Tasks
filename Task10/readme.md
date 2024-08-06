@@ -48,6 +48,7 @@ Access logs: ./nginx/log/access.log
 Error logs: ./nginx/log/error.log
 The logs include details such as remote address, request time, status, response size, and user agent.
 
+
 2. Log Format:
 
 The custom log format in Nginx includes:
