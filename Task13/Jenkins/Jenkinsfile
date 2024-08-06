@@ -1,0 +1,77 @@
+
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'mohamedelsayed7/task13'
+    }
+
+    stages {
+        stage('Preparation') {
+            steps {
+                git url: 'https://github.com/Mohamedzonkol/Jenkins-Pipeline.git', branch: 'main'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                    script {
+                        def buildImage = sh(script: 'docker images -q ${DOCKER_IMAGE}', returnStdout: true).trim()
+                        if (buildImage) {
+                            echo "Image ${DOCKER_IMAGE} already exists, skipping build."
+                        } else {
+                            sh """
+                                docker build . -t ${DOCKER_IMAGE}
+                            """
+                        }
+                    }
+            }
+        }
+        stage('Test') {
+            steps {
+                script {
+                    echo "Running tests..."
+                    // sh """
+                    //     docker run --rm ${DOCKER_IMAGE} ./mvnw test
+                    // """
+                }
+            }
+        }
+         stage('Deploy') {
+            steps {
+                script {
+                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh """
+                        docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+                        docker push ${DOCKER_IMAGE}
+                    """
+                }
+            }
+        }
+        }
+    stage('Run') {
+            steps {
+                script {
+                        sh """
+			                docker-compose pull
+                            docker-compose up -d
+                        """ 
+                }
+            }
+        }
+    }
+
+   post {
+        always {
+            cleanWs()  // Clean workspace after each build
+        }
+        success {
+         echo "Build and deployment were successful!"
+            discordSend description: 'Build and deployment Is successful!😙', footer: '', image: '', link: '', result: '', scmWebUrl: '', thumbnail: '', title: 'Pipeline Status', webhookURL: 'https://discord.com/api/webhooks/1269741771768856778/ZAC2tG19GqQXZVA8fg_-ry80ujESBE-Hx43PDkPbxCszWCILMcrCC-e6VddAH2K9KtCM'
+        }
+        failure {
+            echo "Build or deployment failed!"
+            //the same
+        }
+    }
+}

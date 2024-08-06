@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  fastapi:
+    build: ./fastapi
+    ports:
+      - "8000:8000"
+    networks:
+      - my-network
+
+  flask:
+    build: ./flask
+    ports:
+      - "5000:5000"
+    networks:
+      - my-network
+
+  react:
+    build: ./react-express-mongodb
+    ports:
+      - "3000:3000"
+    networks:
+      - my-network
+
+  # Additional services go here
+  # ...
+
+networks:
+  my-network:
+    driver: bridge
+
+volumes:
+  # Define any shared volumes here
+  # Example:
+  # my-volume:
+  #   driver: local

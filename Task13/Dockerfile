@@ -8,15 +8,16 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
 COPY . .
-
 RUN ./mvnw package
 
 FROM openjdk:17-jdk-slim
 
 ENV JAVA_OPTS=""
 WORKDIR /app
-COPY --from=build /app/spring-petclinic-docker/target/spring-petclinic-*.jar /app/spring-petclinic.jar
+
+COPY --from=build /app /app
+
 EXPOSE 8080
-CMD ["java", "-jar", "/app/spring-petclinic.jar"]
+
+CMD ["java", "-jar", "/app/target/spring-petclinic-3.3.0-SNAPSHOT.jar"]
