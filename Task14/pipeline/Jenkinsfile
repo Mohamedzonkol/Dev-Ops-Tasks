@@ -1,0 +1,99 @@
+pipeline {
+    agent {
+        label 'wsl'
+    }
+
+    environment {
+        DOCKER_IMAGE = 'mohamedelsayed7/task13'
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
+        FULL_IMAGE_NAME = "${DOCKER_IMAGE}:${DOCKER_TAG}"
+        DEPLOY_ENV = "${env.DEPLOY_ENV ?: 'development'}"  
+    }
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['development', 'staging', 'production'], description: 'Deployment environment')
+    }
+
+    triggers {
+        cron('H 2 * * 1-5')  // Run every weekday at 2 AM
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                        echo "Building Docker image: ${FULL_IMAGE_NAME}"
+                        sh """
+                          docker build . -t ${FULL_IMAGE_NAME} 
+                        """
+                }
+            }
+        }
+
+        stage('Test') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        script {
+                            echo "Running unit tests..."
+                            sh """
+                                docker run  ${FULL_IMAGE_NAME} ./mvnw test
+                            """
+                        }
+                    }
+                }
+                stage('Integration Tests') {
+                    steps {
+                        script {
+                            echo "Running integration tests..."
+                            sh """
+                                docker run  ${FULL_IMAGE_NAME} ./mvnw verify
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        echo "Logging in and pushing Docker image..."
+                        sh """
+                           docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+                            docker push ${FULL_IMAGE_NAME}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Run') {
+            steps {
+                script {
+                    echo "Deploying application using Docker Compose in ${DEPLOY_ENV} environment..."
+                    sh """
+                        docker-compose pull
+                        docker-compose up -d
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Cleaning up workspace..."
+            cleanWs()  
+        }
+        success {
+            echo "Build and deployment were successful!"
+            discordSend description: 'Build and deployment were successful.\nCheck it here: ${env.BUILD_URL}', footer: '', image: '', link: '', result: '', scmWebUrl: '', thumbnail: '', title: 'Pipeline Status', webhookURL: 'https://discord.com/api/webhooks/1269741771768856778/ZAC2tG19GqQXZVA8fg_-ry80ujESBE-Hx43PDkPbxCszWCILMcrCC-e6VddAH2K9KtCM'
+        }
+        failure {
+            echo "Build or deployment failed!"
+            discordSend description: 'Build or deployment failed!', footer: '', image: '', link: '', result: '', scmWebUrl: '', thumbnail: '', title: 'Pipeline Status', webhookURL: 'https://discord.com/api/webhooks/1269741771768856778/ZAC2tG19GqQXZVA8fg_-ry80ujESBE-Hx43PDkPbxCszWCILMcrCC-e6VddAH2K9KtCM'
+        }
+    }
+}
